@@ -26,7 +26,6 @@ xcuserdata/
 
 # Swift Package Manager
 .build/
-Packages/
 
 # CocoaPods
 Pods/
