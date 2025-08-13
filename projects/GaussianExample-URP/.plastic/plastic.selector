@@ -1,4 +1,0 @@
-repository "GaussianExample-URP/GaussianExample-URP@9072299913599@cloud"
-  path "/"
-    br "/main"
-    co "/main"
