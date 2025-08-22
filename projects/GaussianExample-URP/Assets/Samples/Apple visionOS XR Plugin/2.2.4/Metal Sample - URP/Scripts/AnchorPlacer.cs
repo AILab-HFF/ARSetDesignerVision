@@ -83,6 +83,8 @@ namespace UnityEngine.XR.VisionOS.Samples.URP
             }
 
             m_Anchor = anchorTransform.gameObject.AddComponent<ARAnchor>();
+            UnityEngine.XR.VisionOS.Samples.URP.AnchorPlacerHelper.LastSpawnedPrefab = anchorTransform.gameObject;
+
         }
 #endif
     }

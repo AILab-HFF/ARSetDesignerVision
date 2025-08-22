@@ -10,7 +10,8 @@
         "Unity.XR.Interaction.Toolkit",
         "Unity.XR.Management",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.XR.CoreUtils"
+        "Unity.XR.CoreUtils",
+        "glTFast"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
