@@ -8,30 +8,38 @@ public class RaySpawnController : MonoBehaviour
     public MeshyService meshy;
     [TextArea] public string prompt = "a monster mask";
 
-    // Optional: eigene InputAction (Editor ODER Gerät)
     public InputActionReference spawnAction;
 
     private Pose lastHitPose;
     private bool hasHit;
     private bool lastPressed;
 
-    void OnEnable() {
-        if (spawnAction != null && spawnAction.action != null) {
-            spawnAction.action.performed += OnSpawnPerformed;
+    void OnEnable()
+    {
+        if (spawnAction != null && spawnAction.action != null)
+        {
+            spawnAction.action.performed += OnSpawnPerformed;  // Press
+            spawnAction.action.canceled  += OnSpawnCanceled;   // Release
             spawnAction.action.Enable();
         }
     }
-    void OnDisable() {
+
+    void OnDisable()
+    {
         if (spawnAction != null && spawnAction.action != null)
+        {
             spawnAction.action.performed -= OnSpawnPerformed;
+            spawnAction.action.canceled  -= OnSpawnCanceled;
+        }
     }
 
     void Update()
     {
-        // 1) XR-Ray-Hit (falls vorhanden)
+        // 1 XR Ray Hit falls vorhanden
         if (ray != null && ray.TryGetCurrent3DRaycastHit(out RaycastHit hit))
         {
-            var fwd = Vector3.Cross(Camera.main.transform.right, hit.normal).normalized;
+            var cam = Camera.main;
+            var fwd = cam ? Vector3.Cross(cam.transform.right, hit.normal).normalized : Vector3.forward;
             lastHitPose = new Pose(hit.point, Quaternion.LookRotation(fwd, hit.normal));
             hasHit = true;
         }
@@ -40,22 +48,30 @@ public class RaySpawnController : MonoBehaviour
             hasHit = false;
         }
 
-        // 2) VisionOS: Polling der UI-Press, wenn keine eigene Action gesetzt
+        // 2 VisionOS Polling wenn keine eigene Action gesetzt
         if ((spawnAction == null || spawnAction.action == null) && ray != null && ray.uiPressInput != null)
         {
             bool pressed = ray.uiPressInput.ReadValue() > 0.5f;
-            if (pressed && !lastPressed) TriggerSpawn();
+
+            // Rising edge → Spawn
+            if (pressed && !lastPressed)
+                TriggerSpawn();
+
+            // Falling edge → Platzieren
+            if (!pressed && lastPressed)
+                meshy.StopFollowingCurrent(true);
+
             lastPressed = pressed;
         }
 
 #if UNITY_EDITOR
-        // 3) Editor-Fallback: Space oder linke Maustaste
+        // 3 Editor Fallback
         if (spawnAction == null || spawnAction.action == null)
         {
+            // Press
             if ((Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) ||
                 (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame))
             {
-                // Wenn XR-Ray nichts trifft, versuche einen Physics.Raycast von der Kamera
                 if (!hasHit)
                 {
                     var cam = Camera.main;
@@ -68,6 +84,13 @@ public class RaySpawnController : MonoBehaviour
                 }
                 TriggerSpawn();
             }
+
+            // Release
+            if ((Keyboard.current != null && Keyboard.current.spaceKey.wasReleasedThisFrame) ||
+                (Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame))
+            {
+                meshy.StopFollowingCurrent(true);
+            }
         }
 #endif
     }
@@ -77,18 +100,37 @@ public class RaySpawnController : MonoBehaviour
         TriggerSpawn();
     }
 
+    private void OnSpawnCanceled(InputAction.CallbackContext _)
+    {
+        // Loslassen → Hand Follow beenden und Objekt im Raum belassen
+        meshy.StopFollowingCurrent(true);
+    }
+
     private void TriggerSpawn()
     {
         if (meshy == null || meshy.isGenerating) return;
 
+        // origin immer ermitteln
+        Transform origin = null;
+        if (ray != null)
+        {
+            origin = ray.rayOriginTransform != null && ray.rayOriginTransform.gameObject.activeInHierarchy
+                ? ray.rayOriginTransform
+                : ray.transform;
+        }
+
         Pose pose;
+
         if (hasHit)
         {
-            pose = lastHitPose;
+            pose = lastHitPose; // initial auf Hit Punkt setzen
+        }
+        else if (origin != null)
+        {
+            pose = new Pose(origin.position, Quaternion.LookRotation(origin.forward, Vector3.up));
         }
         else
         {
-            // Fallback: 1 m vor der Kamera
             var cam = Camera.main;
             if (cam == null) return;
             pose = new Pose(
@@ -97,8 +139,11 @@ public class RaySpawnController : MonoBehaviour
             );
         }
 
-        Debug.Log("Pinch/Click detected → starting Meshy generation");
-        meshy.SetPendingSpawnPose(pose);
+        if (origin != null)
+            meshy.SetPendingSpawnPose(pose, origin, true);  // folgt während gedrückt
+        else
+            meshy.SetPendingSpawnPose(pose);
+
         meshy.GeneratePreviewModel(prompt);
     }
 }

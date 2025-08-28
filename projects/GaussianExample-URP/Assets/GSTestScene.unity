@@ -2690,6 +2690,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   meshyObjectPrefab: {fileID: 286878890}
   isGenerating: 0
+  scaleMultiplier: 0.2
 --- !u!4 &1306474515
 Transform:
   m_ObjectHideFlags: 0
@@ -3398,7 +3399,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2099377581}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
   m_Name: 
